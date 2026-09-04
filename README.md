@@ -1,8 +1,9 @@
-# MeshChat
+# dCentralize
 
-App Android de chat P2P descentralizado, sem servidor e sem internet, usando
-a **Nearby Connections API** do Google Play Services em topologia **mesh**
-(`Strategy.P2P_CLUSTER`).
+Projeto do Trabalho de Conclusão do Curso de Sistemas de Informação do Grupo UNIS, 
+o projet consiste em App Android de chat P2P descentralizado, sem servidor e sem
+ internet, usando a **Nearby Connections API** do Google Play Services em topologia 
+**mesh** (`Strategy.P2P_CLUSTER`).  
 
 Namespace / applicationId: `br.com.netscript.meshchat`.
 
