@@ -1,0 +1,31 @@
+<resources>
+    <string name="app_name">dCentralize</string>
+
+    <string name="title_nodes">Nós</string>
+    <string name="title_messages">Mural</string>
+    <string name="title_settings">Configurações</string>
+    <string name="title_exit">Sair</string>
+
+    <string name="empty_nodes">Nenhum nó conectado. Toque em buscar para procurar dispositivos próximos.</string>
+    <string name="empty_messages">Nenhuma mensagem ainda.</string>
+
+    <string name="hint_message">Digite uma mensagem…</string>
+    <string name="btn_send">Enviar</string>
+    <string name="btn_file_send">Enviar Arquivo</string>
+    <string name="btn_back">Voltar</string>
+    <string name="btn_discover">OFFLINE</string>
+    <string name="btn_stop_discover">ONLINE</string>
+
+    <string name="label_username">Nome de usuário</string>
+    <string name="hint_username">Como você quer ser identificado na rede?</string>
+    <string name="btn_save">Salvar Usuário</string>
+    <string name="get_logger">Baixar Logger</string>
+    <string name="msg_saved">Nome salvo com sucesso</string>
+
+    <string name="status_advertising">Anunciando presença…</string>
+    <string name="status_discovering">Procurando dispositivos…</string>
+    <string name="status_idle">Parado</string>
+
+    <string name="node_status_connected">Conectado</string>
+    <string name="node_status_connecting">Conectando…</string>
+</resources>

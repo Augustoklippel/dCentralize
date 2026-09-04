@@ -1,0 +1,72 @@
+# =========================
+# Android Studio
+# =========================
+
+# IDE
+.idea/
+*.iml
+*.iws
+*.ipr
+
+# Local configuration
+local.properties
+
+# =========================
+# Gradle
+# =========================
+
+.gradle/
+build/
+**/build/
+
+# Gradle generated files
+.gradle-cache/
+gradle-app.setting
+
+# =========================
+# Kotlin
+# =========================
+
+*.class
+.kotlin/
+
+# Kotlin compiler output
+out/
+
+# =========================
+# Android
+# =========================
+
+# APKs
+*.apk
+*.ap_
+*.aab
+
+# Android build outputs
+captures/
+
+# Generated files
+.externalNativeBuild/
+.cxx/
+
+# =========================
+# Logs
+# =========================
+
+*.log
+
+# =========================
+# OS files
+# =========================
+
+.DS_Store
+Thumbs.db
+
+# =========================
+# Temporary files
+# =========================
+
+*.swp
+*.swo
+*~
+

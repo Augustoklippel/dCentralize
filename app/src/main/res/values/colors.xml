@@ -1,0 +1,13 @@
+<resources>
+    <color name="primary">#0E7490</color>
+    <color name="primary_dark">#13699E  </color>
+    <color name="accent">#0A8193</color>
+    <color name="background">#F5F5F5</color>
+    <color name="surface">#FFFFFF</color>
+    <color name="text_primary">#212121</color>
+    <color name="text_secondary">#757575</color>
+    <color name="bubble_sent">#DCF8C6</color>
+    <color name="bubble_received">#FFFFFF</color>
+    <color name="online_dot">#4CAF50</color>
+    <color name="offline_dot">#E53935</color>
+</resources>
