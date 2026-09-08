@@ -20,6 +20,8 @@ import kotlin.system.exitProcess
 import android.content.Context
 import android.media.RingtoneManager
 import android.net.Uri
+import com.google.android.material.badge.BadgeDrawable
+import com.google.android.material.bottomnavigation.BottomNavigationView
 
 /**
  * Activity única do app. Hospeda os 3 fragments (Nós, Mensagens,
@@ -35,6 +37,10 @@ class MainActivity : AppCompatActivity() {
     var _newMuralMessage: Int = 0
     val meshNetworkManager: MeshNetworkManager
         get() = (application as MeshChatApp).meshNetworkManager
+
+    private lateinit var bottomNavigationView: BottomNavigationView
+    private lateinit var badgeDirect: BadgeDrawable
+    private lateinit var badgeMural: BadgeDrawable
 
     private val requiredPermissions: Array<String>
         get() = buildList {
@@ -78,9 +84,9 @@ class MainActivity : AppCompatActivity() {
             showFragment(fragment)
             true
         }
-        //val bottomNavigationView = binding.bottomNav
-        //val  badgeDirect = bottomNavigationView.getOrCreateBadge(R.id.nav_nodes)
-        //val  badgeMural = bottomNavigationView.getOrCreateBadge(R.id.nav_messages)
+        bottomNavigationView = binding.bottomNav
+        badgeDirect = bottomNavigationView.getOrCreateBadge(R.id.nav_nodes)
+        badgeMural = bottomNavigationView.getOrCreateBadge(R.id.nav_messages)
     }
 
     private fun showFragment(fragment: Fragment) {
@@ -104,15 +110,32 @@ class MainActivity : AppCompatActivity() {
         if (count > _newMuralMessage) {
             playAlertSound(this)
             _newMuralMessage = count
+            badgeMural.isVisible = true
         }
         //Toast.makeText(this, "Mensagens no mural: $count", Toast.LENGTH_SHORT).show()
+    }
+    fun hideBadgeMural(){
+        badgeMural.number = 0
+        badgeMural.isVisible = false
     }
     fun showBadgeDirect(count: Int) {
         if (count > _newDirectMessage) {
             playAlertSound(this)
             _newDirectMessage = count
+            badgeDirect.number = count
+            badgeDirect.isVisible = true
         }
         //Toast.makeText(this, "Mensagens diretas: $count", Toast.LENGTH_SHORT).show()
+    }
+    fun hideBadgeDirect() {
+        badgeDirect.number = 0
+        badgeDirect.isVisible = false
+    }
+    fun incrementMuralMessageCount() {
+        _newMuralMessage++
+    }
+    fun incrementDirectMessageCount() {
+        _newDirectMessage++
     }
     private fun requestMissingPermissions() {
         val missing = requiredPermissions.filter {

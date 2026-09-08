@@ -11,6 +11,8 @@ import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
 import androidx.recyclerview.widget.LinearLayoutManager
 import br.com.netscript.meshchat.MainActivity
+import br.com.netscript.meshchat.MeshChatApp
+import br.com.netscript.meshchat.data.UserPreferences
 import br.com.netscript.meshchat.databinding.FragmentMessagesBinding
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
@@ -29,6 +31,10 @@ class MessagesFragment : Fragment() {
 
     private val adapter = MessagesAdapter()
 
+    private val userPreferences get() = (requireActivity().application as MeshChatApp).userPreferences
+
+    private lateinit var peerDeviceId: String
+
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?
     ): View {
@@ -38,6 +44,10 @@ class MessagesFragment : Fragment() {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
+
+        (requireActivity() as MainActivity).hideBadgeMural()
+
+        //peerDeviceId = userPreferences.//userPreferences.getOrCreateDeviceId()
 
         binding.rvMessages.layoutManager = LinearLayoutManager(requireContext()).apply {
             stackFromEnd = true
@@ -61,22 +71,23 @@ class MessagesFragment : Fragment() {
                             if (messages.isNotEmpty()) {
                                 binding.rvMessages.scrollToPosition(messages.size - 1)
                             }
+
                         }
                         binding.tvEmpty.visibility = if (messages.isEmpty()) View.VISIBLE else View.GONE
                     }
             }
         }
         viewLifecycleOwner.lifecycleScope.launch {
+            val peerDeviceId = userPreferences.getOrCreateDeviceId()
+            //Toast.makeText(requireContext(), "Peer_ID: $peerDeviceId", Toast.LENGTH_SHORT).show()
             viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
                 meshManager.messages
-                    .map { all -> all.filter { !it.isBroadcast } }
+                    .map { all -> all.filter { it.conversationId == peerDeviceId } }
                     .collect { messages ->
                         //adapter.submitList(messages) {
                         if (messages.isNotEmpty()) {
                            (requireActivity() as MainActivity).showBadgeDirect(messages.size)
                         }
-                        //}
-                        //binding.tvEmpty.visibility = if (messages.isEmpty()) View.VISIBLE else View.GONE
                     }
             }
         }

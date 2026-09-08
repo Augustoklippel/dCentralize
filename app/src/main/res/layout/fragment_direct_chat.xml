@@ -92,16 +92,16 @@
             android:contentDescription="@string/btn_send"
             android:src="@drawable/outline_send_24" />
 
-        <ImageButton
-            android:id="@+id/btn_file_send"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:background="@color/primary"
-            android:contentDescription="@string/btn_file_send"
-            android:minWidth="42dp"
-            android:minHeight="42dp"
-            android:layout_marginStart="2dp"
-            android:src="@drawable/outline_attach_file_add_24" />
+<!--        <ImageButton-->
+<!--            android:id="@+id/btn_file_send"-->
+<!--            android:layout_width="wrap_content"-->
+<!--            android:layout_height="wrap_content"-->
+<!--            android:background="@color/primary"-->
+<!--            android:contentDescription="@string/btn_file_send"-->
+<!--            android:minWidth="42dp"-->
+<!--            android:minHeight="42dp"-->
+<!--            android:layout_marginStart="2dp"-->
+<!--            android:src="@drawable/outline_attach_file_add_24" />-->
     </LinearLayout>
 
 </androidx.constraintlayout.widget.ConstraintLayout>

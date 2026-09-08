@@ -7,7 +7,6 @@ import br.com.netscript.meshchat.data.ChatMessage
 import br.com.netscript.meshchat.data.Node
 import br.com.netscript.meshchat.data.NodeStatus
 import br.com.netscript.meshchat.data.LoggerApp
-import br.com.netscript.meshchat.ui.TransferState
 import com.google.android.gms.nearby.Nearby
 import com.google.android.gms.nearby.connection.AdvertisingOptions
 import com.google.android.gms.nearby.connection.ConnectionInfo
@@ -21,9 +20,16 @@ import com.google.android.gms.nearby.connection.Payload
 import com.google.android.gms.nearby.connection.PayloadCallback
 import com.google.android.gms.nearby.connection.PayloadTransferUpdate
 import com.google.android.gms.nearby.connection.Strategy
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.isActive
+import kotlinx.coroutines.launch
 import org.json.JSONObject
 import java.security.PublicKey
 import java.util.UUID
@@ -34,7 +40,6 @@ import android.provider.OpenableColumns
 import br.com.netscript.meshchat.data.FileMetadata
 import java.io.File
 import java.nio.charset.StandardCharsets
-
 enum class MeshStatus { IDLE, ADVERTISING_AND_DISCOVERING }
 
 /**
@@ -71,8 +76,10 @@ class MeshNetworkManager(
         private const val TYPE_HELLO = "HELLO"
         private const val TYPE_BROADCAST = "BROADCAST"
         private const val TYPE_DIRECT = "DIRECT"
-        private const val TYPE_FILE = "FILE"
-        private const val TYPE_BYTES = "BYTES"
+        private const val TYPE_PRESENCE = "PRESENCE"
+
+        private const val PRESENCE_INTERVAL_MS = 15_000L
+        private const val PRESENCE_NODE_TIMEOUT_MS = 45_000L
     }
 
     private val connectionsClient = Nearby.getConnectionsClient(context)
@@ -80,12 +87,28 @@ class MeshNetworkManager(
 
     // endpointId -> nome anunciado (nós diretamente conectados)
     private val connectedEndpoints = ConcurrentHashMap<String, String>()
-    // endpointId -> chave pública do peer, para cifrar mensagens diretas
-    private val peerPublicKeys = ConcurrentHashMap<String, PublicKey>()
-    // deviceId lógico -> endpointId direto por onde ele é alcançável (próximo salto)
+    // deviceId lógico -> chave pública do dono daquele deviceId. Alimentado
+    // tanto pelo HELLO (vizinhos diretos) quanto pelos anúncios de presença
+    // (que agora também carregam a chave pública, propagando-a por toda a
+    // mesh). É esta chave — a do deviceId real da outra ponta da conversa,
+    // não a de quem fisicamente entregou o pacote — que deve ser usada para
+    // que a cifra seja de fato ponta-a-ponta, independente de quantos
+    // saltos (relays) a mensagem atravessa no caminho.
+    private val devicePublicKeys = ConcurrentHashMap<String, PublicKey>()
+    // endpointId direto -> deviceId lógico do vizinho (preenchido pelo HELLO)
+    private val endpointToDeviceId = ConcurrentHashMap<String, String>()
+    // deviceId lógico -> endpointId direto por onde ele é alcançável (próximo salto).
+    // Preenchido tanto por HELLO (vizinhos diretos) quanto por anúncios de
+    // presença repassados pela mesh (nós indiretos, multi-hop).
     private val routeTable = ConcurrentHashMap<String, String>()
+    // deviceId lógico -> timestamp do último anúncio de presença recebido,
+    // usado para expirar nós indiretos que somem da mesh sem aviso.
+    private val lastPresenceSeenAt = ConcurrentHashMap<String, Long>()
     // IDs de mensagem já processadas, para evitar loops de flooding
     private val seenMessageIds = LinkedHashSetSync<String>(MAX_SEEN_IDS)
+
+    private val managerScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+    private var presenceJob: Job? = null
 
     private val _status = MutableStateFlow(MeshStatus.IDLE)
     val status: StateFlow<MeshStatus> = _status
@@ -97,12 +120,6 @@ class MeshNetworkManager(
     val messages: StateFlow<List<ChatMessage>> = _messages
 
     private val meuLogger by lazy { LoggerApp(context) }
-
-    // Fluxos que a UI vai escutar
-    val transferProgress = MutableStateFlow(0)
-    val currentFileName = MutableStateFlow("")
-    val transferStatus = MutableStateFlow<TransferState>(TransferState.Idle)
-
     fun updateDisplayName(name: String) {
         localDisplayName = name
     }
@@ -115,15 +132,25 @@ class MeshNetworkManager(
         startAdvertising()
         startDiscovery()
         _status.value = MeshStatus.ADVERTISING_AND_DISCOVERING
+        presenceJob = managerScope.launch {
+            while (isActive) {
+                broadcastPresence()
+                pruneStalePresenceNodes()
+                delay(PRESENCE_INTERVAL_MS)
+            }
+        }
     }
 
     fun stop() {
+        presenceJob?.cancel()
+        presenceJob = null
         connectionsClient.stopAdvertising()
         connectionsClient.stopDiscovery()
         connectionsClient.stopAllEndpoints()
         connectedEndpoints.clear()
-        peerPublicKeys.clear()
+        endpointToDeviceId.clear()
         routeTable.clear()
+        lastPresenceSeenAt.clear()
         _nodes.value = emptyList()
         _status.value = MeshStatus.IDLE
     }
@@ -193,7 +220,7 @@ class MeshNetworkManager(
 
         override fun onDisconnected(endpointId: String) {
             connectedEndpoints.remove(endpointId)
-            peerPublicKeys.remove(endpointId)
+            endpointToDeviceId.remove(endpointId)
             routeTable.entries.removeAll { it.value == endpointId }
             removeNode(endpointId)
         }
@@ -238,9 +265,16 @@ class MeshNetworkManager(
     fun sendDirect(targetDeviceId: String, body: String) {
         val nextHopEndpoint = routeTable[targetDeviceId] ?: run {
             Log.w(TAG, "Nenhuma rota conhecida para $targetDeviceId")
+            meuLogger.gravarLog("MeshNetworkManager", "Nenhuma rota conhecida para $targetDeviceId.")
             return
         }
-        val peerKey = peerPublicKeys[nextHopEndpoint]
+        // Importante: a chave usada para cifrar é a do DESTINO FINAL
+        // (targetDeviceId), não a de nextHopEndpoint. nextHopEndpoint só diz
+        // por qual vizinho físico o pacote deve sair primeiro; se o destino
+        // estiver a mais de um salto, nextHopEndpoint é apenas um relay, e
+        // usar a chave dele quebraria a cifra ponta-a-ponta (o relay não
+        // consegue e não deve conseguir decifrar a mensagem).
+        val peerKey = devicePublicKeys[targetDeviceId]
         val messageId = UUID.randomUUID().toString()
 
         val encryptedBody: String
@@ -291,6 +325,31 @@ class MeshNetworkManager(
         sendPayloadTo(endpointId, json)
     }
 
+    /**
+     * Anuncia (e propaga, via flooding com TTL) a presença deste dispositivo
+     * para toda a mesh. É este mecanismo — e não o HELLO, que só é trocado
+     * entre vizinhos diretos — que permite a nós a 2+ saltos de distância
+     * descobrirem uns aos outros e aparecerem na lista de nós com
+     * `isDirect = false` e `hopCount > 0`. Chamado periodicamente enquanto a
+     * mesh está ativa, e também de forma oportunista sempre que um novo
+     * vizinho direto é estabelecido.
+     */
+    private fun broadcastPresence() {
+        if (connectedEndpoints.isEmpty()) return
+        val messageId = UUID.randomUUID().toString()
+        val json = JSONObject().apply {
+            put("type", TYPE_PRESENCE)
+            put("id", messageId)
+            put("originId", localDeviceId)
+            put("originName", localDisplayName)
+            put("publicKey", cryptoManager.publicKeyBase64)
+            put("hopCount", 0)
+            put("ttl", DEFAULT_TTL)
+        }
+        seenMessageIds.add(messageId)
+        broadcastToAllDirectPeers(json, excludeEndpointId = null)
+    }
+
     private fun sendPayloadTo(endpointId: String, json: JSONObject) {
         val bytes = json.toString().toByteArray(Charsets.UTF_8)
         connectionsClient.sendPayload(endpointId, Payload.fromBytes(bytes))
@@ -331,8 +390,7 @@ class MeshNetworkManager(
             TYPE_HELLO -> handleHello(fromEndpointId, json)
             TYPE_BROADCAST -> handleBroadcast(fromEndpointId, json)
             TYPE_DIRECT -> handleDirect(fromEndpointId, json)
-            TYPE_BYTES -> handleByteFile(fromEndpointId, json)
-            TYPE_FILE -> handleFile(fromEndpointId, json)
+            TYPE_PRESENCE -> handlePresence(fromEndpointId, json)
         }
     }
 
@@ -342,13 +400,24 @@ class MeshNetworkManager(
         val publicKeyB64 = json.optString("publicKey")
 
         connectedEndpoints[fromEndpointId] = displayName
+        endpointToDeviceId[fromEndpointId] = deviceId
         routeTable[deviceId] = fromEndpointId
         try {
-            peerPublicKeys[fromEndpointId] = cryptoManager.decodePublicKey(publicKeyB64)
+            devicePublicKeys[deviceId] = cryptoManager.decodePublicKey(publicKeyB64)
         } catch (e: Exception) {
             Log.w(TAG, "Chave pública inválida recebida de $displayName", e)
+            meuLogger.gravarLog("MeshNetworkManager", "Chave pública inválida recebida de $displayName.")
         }
+        // Um novo nó indireto pode ter se tornado direto (ou vice-versa em
+        // outra parte da mesh); remove qualquer entrada indireta obsoleta
+        // para este deviceId e mantém apenas a direta, mais precisa.
+        lastPresenceSeenAt.remove(deviceId)
         upsertNode(fromEndpointId, displayName, isDirect = true, hopCount = 0, status = NodeStatus.CONNECTED, deviceId = deviceId)
+
+        // Anuncia minha presença imediatamente para que o resto da mesh
+        // aprenda sobre este novo vizinho sem esperar o próximo tick
+        // periódico, e vice-versa (o vizinho fará o mesmo ao me processar).
+        broadcastPresence()
     }
 
     private fun handleBroadcast(fromEndpointId: String, json: JSONObject) {
@@ -391,7 +460,7 @@ class MeshNetworkManager(
 
         val targetId = json.optString("targetId")
         val ttl = json.optInt("ttl", 0)
-        // Se a mensagem for para mim.
+
         if (targetId == localDeviceId) {
             val originId = json.optString("originId")
             val originName = json.optString("originName")
@@ -400,13 +469,21 @@ class MeshNetworkManager(
             val rawBody = json.optString("body")
 
             val body = if (encrypted) {
-                val peerKey = peerPublicKeys[fromEndpointId]
-                if (peerKey != null) {
+                // Decifra usando a chave pública do REMETENTE ORIGINAL
+                // (originId), simetricamente ao que sendDirect faz ao
+                // cifrar com a chave do destinatário final. Usar a chave de
+                // fromEndpointId (quem entregou fisicamente o pacote) só
+                // funcionaria para o caso de 1 salto; para mensagens
+                // repassadas por relays, fromEndpointId seria o último
+                // relay, não o remetente original, e a cifra nunca bateria.
+                val originKey = devicePublicKeys[originId]
+                if (originKey != null) {
                     try {
-                        val secret = cryptoManager.deriveSharedSecret(peerKey)
+                        val secret = cryptoManager.deriveSharedSecret(originKey)
                         cryptoManager.decrypt(rawBody, secret)
                     } catch (e: Exception) {
                         Log.w(TAG, "Falha ao decifrar mensagem direta de $originName", e)
+                        meuLogger.gravarLog("MeshNetworkManager", "Falha ao decifrar mensagem direta de $originName.")
                         "[mensagem cifrada não pôde ser lida]"
                     }
                 } else {
@@ -443,35 +520,84 @@ class MeshNetworkManager(
             meuLogger.gravarLog("MeshNetworkManager", "A mensagem de $originName foi retransmitida. Conteúdo da Mensagem: $body")
         }
     }
-    private fun handleByteFile(fromEndpointId: String, json: JSONObject) {
-        //val file = payload.asFile()?.asJavaFile()
-        val deviceId = json.optString("deviceId")
-        val displayName = json.optString("displayName")
-        val publicKeyB64 = json.optString("publicKey")
 
-        connectedEndpoints[fromEndpointId] = displayName
-        routeTable[deviceId] = fromEndpointId
-        try {
-            peerPublicKeys[fromEndpointId] = cryptoManager.decodePublicKey(publicKeyB64)
-        } catch (e: Exception) {
-            Log.w(TAG, "Chave pública inválida recebida de $displayName", e)
+    /**
+     * Processa um anúncio de presença recebido de outro nó da mesh (próprio
+     * ou repassado por um relay). É o que preenche a lista de nós com
+     * dispositivos fora do alcance direto e ensina a `routeTable` como
+     * alcançá-los (próximo salto = `fromEndpointId`, o vizinho direto que
+     * acabou de me entregar este anúncio).
+     */
+    private fun handlePresence(fromEndpointId: String, json: JSONObject) {
+        val messageId = json.optString("id")
+        if (!seenMessageIds.add(messageId)) return // já processada, evita loop
+
+        val originId = json.optString("originId")
+        val originName = json.optString("originName")
+        val publicKeyB64 = json.optString("publicKey")
+        val hopCount = json.optInt("hopCount", 0)
+        val ttl = json.optInt("ttl", 0)
+
+        if (originId != localDeviceId) {
+            // Guarda a chave pública do originador sempre que ela vier
+            // presente, independente de ele ser direto ou indireto — é o
+            // que permite cifrar mensagens diretas ponta-a-ponta para
+            // qualquer dispositivo da mesh, mesmo a vários saltos de
+            // distância, sem depender de uma conexão HELLO direta com ele.
+            if (publicKeyB64.isNotEmpty() && !devicePublicKeys.containsKey(originId)) {
+                try {
+                    devicePublicKeys[originId] = cryptoManager.decodePublicKey(publicKeyB64)
+                } catch (e: Exception) {
+                    Log.w(TAG, "Chave pública inválida em anúncio de presença de $originName", e)
+                }
+            }
+
+            if (!isDirectNeighborDevice(originId)) {
+                // fromEndpointId é um vizinho direto meu que me repassou este
+                // anúncio; ele é, portanto, um next-hop válido para alcançar
+                // originId. hopCount reflete quantos saltos além da conexão
+                // direta já foram percorridos até aqui.
+                routeTable[originId] = fromEndpointId
+                lastPresenceSeenAt[originId] = System.currentTimeMillis()
+                upsertNode(
+                    endpointId = "mesh:$originId",
+                    displayName = originName,
+                    isDirect = false,
+                    hopCount = hopCount,
+                    status = NodeStatus.CONNECTED,
+                    deviceId = originId
+                )
+            }
         }
-        //upsertNode(fromEndpointId, displayName, isDirect = true, hopCount = 0, status = NodeStatus.CONNECTED, deviceId = deviceId)
+
+        if (ttl > 0) {
+            val forwarded = JSONObject(json.toString()).apply {
+                put("hopCount", hopCount + 1)
+                put("ttl", ttl - 1)
+            }
+            broadcastToAllDirectPeers(forwarded, excludeEndpointId = fromEndpointId)
+        }
     }
-    private fun handleFile(fromEndpointId: String, json: JSONObject) {
-        //val file = payload.asFile()?.asJavaFile()
-        val deviceId = json.optString("deviceId")
-        val displayName = json.optString("displayName")
-        val publicKeyB64 = json.optString("publicKey")
 
-        connectedEndpoints[fromEndpointId] = displayName
-        routeTable[deviceId] = fromEndpointId
-        try {
-            peerPublicKeys[fromEndpointId] = cryptoManager.decodePublicKey(publicKeyB64)
-        } catch (e: Exception) {
-            Log.w(TAG, "Chave pública inválida recebida de $displayName", e)
+    private fun isDirectNeighborDevice(deviceId: String): Boolean =
+        endpointToDeviceId.containsValue(deviceId)
+
+    /**
+     * Remove da lista nós indiretos que pararam de ser renovados por novos
+     * anúncios de presença — sinal de que a mesh mudou de topologia em
+     * algum ponto fora do meu alcance direto e eles não são mais
+     * alcançáveis. Nós diretos não são afetados: sua remoção é feita
+     * imediatamente por `onDisconnected`.
+     */
+    private fun pruneStalePresenceNodes() {
+        val now = System.currentTimeMillis()
+        val stale = lastPresenceSeenAt.filterValues { now - it > PRESENCE_NODE_TIMEOUT_MS }.keys
+        if (stale.isEmpty()) return
+        stale.forEach { deviceId ->
+            lastPresenceSeenAt.remove(deviceId)
+            routeTable.remove(deviceId)
         }
-        //upsertNode(fromEndpointId, displayName, isDirect = true, hopCount = 0, status = NodeStatus.CONNECTED, deviceId = deviceId)
+        _nodes.update { current -> current.filterNot { !it.isDirect && it.deviceId in stale } }
     }
 
     // ---------------------------------------------------------------------
@@ -486,17 +612,28 @@ class MeshNetworkManager(
         status: NodeStatus,
         deviceId: String? = null
     ) {
-        // O nó é sempre indexado pelo endpointId físico da Nearby Connections
-        // (estável enquanto a conexão dura). O deviceId lógico, quando
-        // conhecido via HELLO, já foi registrado em routeTable separadamente.
+        // O nó é indexado pelo endpointId — físico da Nearby Connections para
+        // vizinhos diretos, ou sintético ("mesh:<deviceId>") para nós
+        // aprendidos apenas via anúncio de presença (indiretos). Quando o
+        // deviceId lógico é conhecido, também deduplicamos por ele, pois o
+        // mesmo dispositivo pode ter passado de indireto para direto (ou
+        // vice-versa) e não deve aparecer duas vezes na lista.
         _nodes.update { current ->
-            val filtered = current.filterNot { it.endpointId == endpointId }
-            // Preserva um deviceId já conhecido se esta chamada não trouxer um novo
-            // (ex.: atualização de status sem re-receber HELLO).
-            val previousDeviceId = current.firstOrNull { it.endpointId == endpointId }?.deviceId
+            if (deviceId != null && !isDirect) {
+                // Um anúncio indireto nunca deve sobrescrever uma conexão
+                // direta já conhecida para o mesmo dispositivo: a direta é
+                // sempre mais precisa e atualizada por outro caminho (HELLO).
+                val existingDirect = current.firstOrNull { it.deviceId == deviceId && it.isDirect }
+                if (existingDirect != null) return@update current
+            }
+            var filtered = current.filterNot { it.endpointId == endpointId }
+            if (deviceId != null) {
+                filtered = filtered.filterNot { it.deviceId == deviceId }
+            }
+            val previousDeviceId = deviceId ?: current.firstOrNull { it.endpointId == endpointId }?.deviceId
             filtered + Node(
                 endpointId = endpointId,
-                deviceId = deviceId ?: previousDeviceId,
+                deviceId = previousDeviceId,
                 displayName = displayName.ifBlank { endpointId },
                 isDirect = isDirect,
                 hopCount = hopCount,
@@ -516,11 +653,6 @@ class MeshNetworkManager(
 
     private fun appendRemoteMessage(message: ChatMessage) {
         _messages.update { it + message }
-    }
-
-    // Função auxiliar para salvar o arquivo recebido
-    private fun saveReceivedFile(uri: Uri, filename: String) {
-        println("Salvando arquivo: $filename em $uri")
     }
 }
 

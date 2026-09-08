@@ -85,9 +85,9 @@ class DirectChatFragment : Fragment() {
                 binding.etMessage.text?.clear()
             }
         }
-        binding.btnFileSend.setOnClickListener {
-            selecionarArquivo.launch(arrayOf("*/*"))
-        }
+//        binding.btnFileSend.setOnClickListener {
+//            selecionarArquivo.launch(arrayOf("*/*"))
+//        }
         viewLifecycleOwner.lifecycleScope.launch {
             viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
                 meshManager.messages
