@@ -6,7 +6,7 @@
     <string name="title_settings">Configurações</string>
     <string name="title_exit">Sair</string>
 
-    <string name="empty_nodes">Nenhum nó conectado. Toque em buscar para procurar dispositivos próximos.</string>
+    <string name="empty_nodes">Nenhum nó encontrado. Buscando por dispositivos próximos.</string>
     <string name="empty_messages">Nenhuma mensagem ainda.</string>
 
     <string name="hint_message">Digite uma mensagem…</string>

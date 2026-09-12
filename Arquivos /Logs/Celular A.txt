@@ -1,0 +1,112 @@
+09/09/2026 20:58:12.761 [MeshNetworkManager]: O anunciamento foi iniciado.
+09/09/2026 20:58:12.767 [MeshNetworkManager]: A descoberta foi finalizada.
+09/09/2026 20:58:35.506 [[FAIL]]: Falha ao solicitar conexão com VB17
+09/09/2026 20:58:35.512 [[FAIL]]: Falha ao solicitar conexão com 51QW
+09/09/2026 20:59:30.550 [[FAIL]]: Falha ao solicitar conexão com 80NI
+09/09/2026 21:00:01.121 [[FAIL]]: Falha ao solicitar conexão com LGXB
+09/09/2026 21:01:12.176 [[FAIL]]: Falha ao solicitar conexão com 80NI
+09/09/2026 21:02:36.603 [[FAIL]]: Falha ao solicitar conexão com 3B5D
+09/09/2026 21:02:49.132 [[FAIL]]: Falha ao solicitar conexão com LGXB
+09/09/2026 21:07:16.599 [[FAIL]]: Falha ao solicitar conexão com 3B5D
+09/09/2026 21:07:38.159 [[FAIL]]: Falha ao solicitar conexão com BJ9U
+09/09/2026 21:08:23.985 [[FAIL]]: Falha ao solicitar conexão com 6FIZ
+09/09/2026 21:19:55.461 [[FAIL]]: Falha ao solicitar conexão com 3B5D
+09/09/2026 21:41:11.492 [[FAIL]]: Falha ao solicitar conexão com RA1L
+09/09/2026 21:44:10.507 [[FAIL]]: Falha ao solicitar conexão com RA1L
+09/09/2026 21:50:16.013 [[FAIL]]: Falha ao solicitar conexão com 3K6W
+09/09/2026 22:01:23.861 [[FAIL]]: Falha ao solicitar conexão com 3K6W
+09/09/2026 22:11:10.313 [[FAIL]]: Falha ao solicitar conexão com VO6X
+09/09/2026 22:12:51.938 [[FAIL]]: Falha ao solicitar conexão com ULUT
+09/09/2026 22:13:57.849 [[FAIL]]: Falha ao solicitar conexão com 3K6W
+09/09/2026 22:13:57.856 [[FAIL]]: Falha ao enviar payload em broadcast para vizinhos diretos
+09/09/2026 22:13:57.863 [[FAIL]]: Falha ao enviar payload em broadcast para vizinhos diretos
+09/09/2026 22:13:57.869 [[FAIL]]: Falha ao enviar payload em broadcast para vizinhos diretos
+09/09/2026 22:14:33.645 [[FAIL]]: Falha ao solicitar conexão com 73OE
+09/09/2026 22:16:29.231 [[FAIL]]: Falha ao solicitar conexão com HDIE
+09/09/2026 22:17:54.021 [[FAIL]]: Falha ao solicitar conexão com AFGN
+09/09/2026 22:19:07.191 [[FAIL]]: Falha ao solicitar conexão com 6AWM
+09/09/2026 22:24:14.459 [MeshNetworkManager]: O anunciamento foi iniciado.
+09/09/2026 22:24:14.463 [MeshNetworkManager]: A descoberta foi finalizada.
+09/09/2026 22:24:18.679 [MeshNetworkManager]: O anunciamento foi iniciado.
+09/09/2026 22:24:18.683 [MeshNetworkManager]: A descoberta foi finalizada.
+09/09/2026 22:24:56.235 [[FAIL]]: Falha ao solicitar conexão com LGXB
+09/09/2026 22:25:32.304 [[FAIL]]: Falha ao solicitar conexão com 6FIZ
+09/09/2026 22:25:42.435 [[FAIL]]: Falha ao solicitar conexão com 6AWM
+09/09/2026 22:26:33.423 [[FAIL]]: Falha ao solicitar conexão com O8XZ
+09/09/2026 22:27:37.149 [[FAIL]]: Falha ao solicitar conexão com LLXK
+09/09/2026 22:29:00.917 [[FAIL]]: Falha ao solicitar conexão com LLXK
+09/09/2026 22:29:15.233 [[FAIL]]: Falha ao solicitar conexão com O8XZ
+09/09/2026 22:31:43.405 [[FAIL]]: Falha ao solicitar conexão com O8XZ
+09/09/2026 22:33:50.068 [[FAIL]]: Falha ao solicitar conexão com O8XZ
+09/09/2026 22:36:09.798 [[FAIL]]: Falha ao solicitar conexão com O8XZ
+09/09/2026 22:36:40.756 [[FAIL]]: Falha ao solicitar conexão com 6AWM
+09/09/2026 22:43:10.988 [[FAIL]]: Falha ao solicitar conexão com 3K6W
+09/09/2026 22:44:09.367 [[FAIL]]: Falha ao solicitar conexão com A9DV
+09/09/2026 22:53:10.001 [[FAIL]]: Falha ao solicitar conexão com 6AWM
+09/09/2026 22:57:47.417 [[FAIL]]: Falha ao solicitar conexão com 6AWM
+09/09/2026 23:01:08.834 [[FAIL]]: Falha ao solicitar conexão com A9DV
+09/09/2026 23:03:02.029 [[FAIL]]: Falha ao solicitar conexão com 3K6W
+09/09/2026 23:05:22.835 [[FAIL]]: Falha ao solicitar conexão com 3K6W
+09/09/2026 23:09:39.029 [[FAIL]]: Falha ao solicitar conexão com 3K6W
+09/09/2026 23:12:38.637 [MeshNetworkManager]: O anunciamento foi iniciado.
+09/09/2026 23:12:38.641 [MeshNetworkManager]: A descoberta foi finalizada.
+09/09/2026 23:12:51.725 [MeshNetworkManager]: O anunciamento foi iniciado.
+09/09/2026 23:12:51.730 [MeshNetworkManager]: A descoberta foi finalizada.
+11/09/2026 18:00:18.306 [MeshNetworkManager]: O anunciamento foi iniciado.
+11/09/2026 18:00:18.315 [MeshNetworkManager]: A descoberta foi finalizada.
+11/09/2026 18:01:33.951 [[FAIL]]: Falha ao solicitar conexão com LTEF
+11/09/2026 18:01:57.204 [[FAIL]]: Falha ao solicitar conexão com 9CWA
+11/09/2026 18:02:04.969 [[FAIL]]: Falha ao solicitar conexão com UR37
+11/09/2026 18:02:15.588 [MeshNetworkManager]: O anunciamento foi iniciado.
+11/09/2026 18:02:15.590 [MeshNetworkManager]: A descoberta foi finalizada.
+11/09/2026 18:03:28.104 [[FAIL]]: Falha ao solicitar conexão com LTEF
+11/09/2026 18:03:43.609 [[FAIL]]: Falha ao solicitar conexão com OXHP
+11/09/2026 18:03:46.566 [MeshNetworkManager]: O anunciamento foi iniciado.
+11/09/2026 18:03:46.574 [MeshNetworkManager]: A descoberta foi finalizada.
+11/09/2026 18:04:18.268 [[FAIL]]: Falha ao solicitar conexão com 9CWA
+11/09/2026 18:04:19.101 [[FAIL]]: Falha ao aceitar conexão com LTEF.
+11/09/2026 18:04:22.064 [MeshNetworkManager]: O anunciamento foi iniciado.
+11/09/2026 18:04:22.069 [MeshNetworkManager]: A descoberta foi finalizada.
+11/09/2026 18:05:02.087 [MeshNetworkManager]: O anunciamento foi iniciado.
+11/09/2026 18:05:02.089 [MeshNetworkManager]: A descoberta foi finalizada.
+11/09/2026 18:05:57.097 [[FAIL]]: Falha ao solicitar conexão com N8PI
+11/09/2026 18:06:39.010 [MeshNetworkManager]: O anunciamento foi iniciado.
+11/09/2026 18:06:39.014 [MeshNetworkManager]: A descoberta foi finalizada.
+11/09/2026 18:07:57.304 [[FAIL]]: Falha ao solicitar conexão com LTEF
+11/09/2026 18:12:14.016 [[FAIL]]: Falha ao solicitar conexão com N8PI
+11/09/2026 18:16:09.488 [MeshNetworkManager]: A mensagem do Mural foi recebida de Celular D. Conteúdo da Mensagem: Olá para todos.....
+11/09/2026 18:16:09.496 [MeshNetworkManager]: A mensagem do MURAL de Celular D foi retransmitida. Conteúdo da Mensagem: Olá para todos.....
+11/09/2026 18:21:26.457 [[FAIL]]: Falha ao solicitar conexão com LTEF
+11/09/2026 18:22:43.024 [[FAIL]]: Falha ao solicitar conexão com N8PI
+11/09/2026 18:25:54.468 [[FAIL]]: Falha ao solicitar conexão com N8PI
+11/09/2026 18:31:47.739 [MeshNetworkManager]: A mensagem direta foi recebida de Celular B. Conteúdo da Mensagem: Estou aqui e bem!
+11/09/2026 18:33:33.297 [MeshNetworkManager]: A mensagem do Mural foi recebida de Celular B. Conteúdo da Mensagem: Eu sou o Celular B
+11/09/2026 18:33:33.299 [MeshNetworkManager]: A mensagem do MURAL de Celular B foi retransmitida. Conteúdo da Mensagem: Eu sou o Celular B
+11/09/2026 18:37:09.381 [MeshNetworkManager]: A mensagem do Mural foi recebida de Celular C. Conteúdo da Mensagem: Eu sou o Celular C.
+11/09/2026 18:37:09.388 [MeshNetworkManager]: A mensagem do MURAL de Celular C foi retransmitida. Conteúdo da Mensagem: Eu sou o Celular C.
+11/09/2026 18:41:37.241 [[FAIL]]: Falha ao solicitar conexão com LTEF
+11/09/2026 18:42:29.703 [MeshNetworkManager]: A mensagem do Mural foi recebida de Celular E. Conteúdo da Mensagem: Eu sou o Celular E.
+11/09/2026 18:42:29.705 [MeshNetworkManager]: A mensagem do MURAL de Celular E foi retransmitida. Conteúdo da Mensagem: Eu sou o Celular E.
+11/09/2026 18:43:59.690 [[FAIL]]: Falha ao solicitar conexão com LTEF
+11/09/2026 19:13:19.393 [MeshNetworkManager]: O anunciamento foi iniciado.
+11/09/2026 19:13:19.401 [MeshNetworkManager]: A descoberta foi finalizada.
+11/09/2026 19:14:29.359 [[FAIL]]: Falha ao solicitar conexão com UR37
+11/09/2026 19:15:37.052 [[FAIL]]: Falha ao solicitar conexão com LTEF
+11/09/2026 19:18:40.344 [[FAIL]]: Falha ao solicitar conexão com DWQI
+11/09/2026 19:21:38.572 [[FAIL]]: Falha ao solicitar conexão com KY0F
+11/09/2026 19:23:11.279 [[FAIL]]: Falha ao enviar payload em broadcast para vizinhos diretos
+11/09/2026 19:24:29.948 [[FAIL]]: Falha ao solicitar conexão com D67A
+11/09/2026 19:27:57.559 [MeshNetworkManager]: O anunciamento foi iniciado.
+11/09/2026 19:27:57.567 [MeshNetworkManager]: A descoberta foi finalizada.
+11/09/2026 19:33:39.884 [MeshNetworkManager]: O anunciamento foi iniciado.
+11/09/2026 19:33:39.892 [MeshNetworkManager]: A descoberta foi finalizada.
+11/09/2026 19:34:40.754 [[FAIL]]: Falha ao solicitar conexão com L78N
+11/09/2026 19:35:32.155 [[FAIL]]: Falha ao solicitar conexão com JSUQ
+11/09/2026 19:36:31.632 [[FAIL]]: Falha ao solicitar conexão com 2TZV
+11/09/2026 19:38:18.882 [[FAIL]]: Falha ao solicitar conexão com 2TZV
+11/09/2026 19:40:18.207 [[FAIL]]: Falha ao solicitar conexão com 2TZV
+11/09/2026 19:44:28.811 [[FAIL]]: Falha ao solicitar conexão com 2TZV
+11/09/2026 19:45:46.991 [[FAIL]]: Falha ao solicitar conexão com JSUQ
+11/09/2026 19:47:37.873 [[FAIL]]: Falha ao solicitar conexão com JSUQ
+11/09/2026 19:47:39.396 [MeshNetworkManager]: O anunciamento foi iniciado.
+11/09/2026 19:47:39.398 [MeshNetworkManager]: A descoberta foi finalizada.

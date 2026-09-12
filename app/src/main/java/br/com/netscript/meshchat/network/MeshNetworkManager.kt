@@ -105,6 +105,7 @@ class MeshNetworkManager(
     // usado para expirar nós indiretos que somem da mesh sem aviso.
     private val lastPresenceSeenAt = ConcurrentHashMap<String, Long>()
     // IDs de mensagem já processadas, para evitar loops de flooding
+    private val pendingConnections = java.util.Collections.newSetFromMap(ConcurrentHashMap<String, Boolean>())
     private val seenMessageIds = LinkedHashSetSync<String>(MAX_SEEN_IDS)
 
     private val managerScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
@@ -163,7 +164,9 @@ class MeshNetworkManager(
             SERVICE_ID,
             connectionLifecycleCallback,
             options
-        ).addOnFailureListener { e -> Log.w(TAG, "Falha ao iniciar advertising", e) }
+        ).addOnFailureListener { e ->
+            meuLogger.gravarLog("[FAIL]", "Falha ao iniciar advertising")
+            Log.w(TAG, "Falha ao iniciar advertising", e) }
     }
 
     private fun startDiscovery() {
@@ -173,7 +176,9 @@ class MeshNetworkManager(
             SERVICE_ID,
             endpointDiscoveryCallback,
             options
-        ).addOnFailureListener { e -> Log.w(TAG, "Falha ao iniciar discovery", e) }
+        ).addOnFailureListener { e ->
+            meuLogger.gravarLog("[FAIL]", "Falha ao iniciar discovery")
+            Log.w(TAG, "Falha ao iniciar discovery", e) }
     }
 
     // ---------------------------------------------------------------------
@@ -182,11 +187,17 @@ class MeshNetworkManager(
 
     private val endpointDiscoveryCallback = object : EndpointDiscoveryCallback() {
         override fun onEndpointFound(endpointId: String, info: DiscoveredEndpointInfo) {
+            if (connectedEndpoints.containsKey(endpointId) || !pendingConnections.add(endpointId)) {
+                return
+            }
             connectionsClient.requestConnection(
                 localDisplayName,
                 endpointId,
                 connectionLifecycleCallback
-            ).addOnFailureListener { e -> Log.w(TAG, "Falha ao solicitar conexão com $endpointId", e) }
+            ).addOnFailureListener { e ->
+                pendingConnections.remove(endpointId)
+                meuLogger.gravarLog("[FAIL]", "Falha ao solicitar conexão com $endpointId")
+                Log.w(TAG, "Falha ao solicitar conexão com $endpointId", e) }
         }
 
         override fun onEndpointLost(endpointId: String) {
@@ -203,27 +214,48 @@ class MeshNetworkManager(
         override fun onConnectionInitiated(endpointId: String, info: ConnectionInfo) {
             // Aceita automaticamente; em um app de produção convém confirmar
             // via UI (comparação de código) antes de aceitar.
+            pendingConnections.add(endpointId)
             connectionsClient.acceptConnection(endpointId, payloadCallback)
+                .addOnFailureListener { e ->
+                    meuLogger.gravarLog("[FAIL]", "Falha ao aceitar conexão com $endpointId.")
+                    Log.w(TAG, "Falha ao aceitar conexão com $endpointId", e) }
             upsertNode(endpointId, info.endpointName, isDirect = true, hopCount = 0, status = NodeStatus.CONNECTING, deviceId = null)
         }
 
         override fun onConnectionResult(endpointId: String, result: ConnectionResolution) {
+            pendingConnections.remove(endpointId)
             if (result.status.statusCode == ConnectionsStatusCodes.STATUS_OK) {
                 connectedEndpoints[endpointId] = connectedEndpoints[endpointId] ?: endpointId
                 upsertNode(endpointId, connectedEndpoints[endpointId] ?: endpointId, isDirect = true, hopCount = 0, status = NodeStatus.CONNECTED, deviceId = null)
                 sendHello(endpointId)
             } else {
-                connectedEndpoints.remove(endpointId)
-                removeNode(endpointId)
+                //connectedEndpoints.remove(endpointId)
+                //removeNode(endpointId)
+                handleEndpointGone(endpointId)
             }
         }
 
         override fun onDisconnected(endpointId: String) {
-            connectedEndpoints.remove(endpointId)
-            endpointToDeviceId.remove(endpointId)
-            routeTable.entries.removeAll { it.value == endpointId }
-            removeNode(endpointId)
+            //connectedEndpoints.remove(endpointId)
+            //endpointToDeviceId.remove(endpointId)
+            //routeTable.entries.removeAll { it.value == endpointId }
+            //removeNode(endpointId)
+            handleEndpointGone(endpointId)
         }
+    }
+    /**
+     * Limpa todo o estado associado a um endpoint que não está mais
+     * disponível — seja por desconexão normal, falha de negociação ou falha
+     * ao enviar um payload para ele. Centralizar essa limpeza evita que
+     * entradas "fantasma" continuem na tabela de rotas ou na lista de nós
+     * apontando para um link que já não existe.
+     */
+    private fun handleEndpointGone(endpointId: String) {
+        connectedEndpoints.remove(endpointId)
+        endpointToDeviceId.remove(endpointId)
+        pendingConnections.remove(endpointId)
+        routeTable.entries.removeAll { it.value == endpointId }
+        removeNode(endpointId)
     }
 
     // ---------------------------------------------------------------------
@@ -265,7 +297,7 @@ class MeshNetworkManager(
     fun sendDirect(targetDeviceId: String, body: String) {
         val nextHopEndpoint = routeTable[targetDeviceId] ?: run {
             Log.w(TAG, "Nenhuma rota conhecida para $targetDeviceId")
-            meuLogger.gravarLog("MeshNetworkManager", "Nenhuma rota conhecida para $targetDeviceId.")
+            meuLogger.gravarLog("[WARN]", "Nenhuma rota conhecida para $targetDeviceId.")
             return
         }
         // Importante: a chave usada para cifrar é a do DESTINO FINAL
@@ -353,6 +385,11 @@ class MeshNetworkManager(
     private fun sendPayloadTo(endpointId: String, json: JSONObject) {
         val bytes = json.toString().toByteArray(Charsets.UTF_8)
         connectionsClient.sendPayload(endpointId, Payload.fromBytes(bytes))
+            .addOnFailureListener { e ->
+                meuLogger.gravarLog("[FAIL]", "Falha ao enviar payload para $endpointId")
+                Log.w(TAG, "Falha ao enviar payload para $endpointId", e)
+                handleEndpointGone(endpointId)
+            }
     }
 
     private fun broadcastToAllDirectPeers(json: JSONObject, excludeEndpointId: String?) {
@@ -361,6 +398,10 @@ class MeshNetworkManager(
         val targets = connectedEndpoints.keys.filter { it != excludeEndpointId }
         if (targets.isNotEmpty()) {
             connectionsClient.sendPayload(targets, payload)
+                .addOnFailureListener { e ->
+                    meuLogger.gravarLog("[FAIL]", "Falha ao enviar payload em broadcast para vizinhos diretos")
+                    Log.w(TAG, "Falha ao enviar payload em broadcast para vizinhos diretos", e)
+                }
         }
     }
 
@@ -374,6 +415,7 @@ class MeshNetworkManager(
             val json = try {
                 JSONObject(String(bytes, Charsets.UTF_8))
             } catch (e: Exception) {
+                meuLogger.gravarLog("[ERROR]", "Payload malformado recebido de $fromEndpointId")
                 Log.w(TAG, "Payload malformado recebido de $fromEndpointId", e)
                 return
             }
@@ -406,7 +448,7 @@ class MeshNetworkManager(
             devicePublicKeys[deviceId] = cryptoManager.decodePublicKey(publicKeyB64)
         } catch (e: Exception) {
             Log.w(TAG, "Chave pública inválida recebida de $displayName", e)
-            meuLogger.gravarLog("MeshNetworkManager", "Chave pública inválida recebida de $displayName.")
+            meuLogger.gravarLog("[ERROR]", "Chave pública inválida recebida de $displayName.")
         }
         // Um novo nó indireto pode ter se tornado direto (ou vice-versa em
         // outra parte da mesh); remove qualquer entrada indireta obsoleta
@@ -483,7 +525,7 @@ class MeshNetworkManager(
                         cryptoManager.decrypt(rawBody, secret)
                     } catch (e: Exception) {
                         Log.w(TAG, "Falha ao decifrar mensagem direta de $originName", e)
-                        meuLogger.gravarLog("MeshNetworkManager", "Falha ao decifrar mensagem direta de $originName.")
+                        meuLogger.gravarLog("[ERROR]", "Falha ao decifrar mensagem direta de $originName.")
                         "[mensagem cifrada não pôde ser lida]"
                     }
                 } else {
@@ -548,7 +590,8 @@ class MeshNetworkManager(
                 try {
                     devicePublicKeys[originId] = cryptoManager.decodePublicKey(publicKeyB64)
                 } catch (e: Exception) {
-                    Log.w(TAG, "Chave pública inválida em anúncio de presença de $originName", e)
+                    meuLogger.gravarLog("[ERROR]", "Chave pública inválida em anúncio de presença de $originName.")
+                    Log.w(TAG, "Chave pública inválida em anúncio de presença de $originName.", e)
                 }
             }
 
