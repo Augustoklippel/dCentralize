@@ -78,3 +78,25 @@ MainActivity
   cair no meio do caminho.
 - Sem histórico persistente: mensagens e nós existem apenas em memória
   (StateFlow) enquanto o processo do app estiver vivo.
+
+## Screenshots
+
+### Principal (offline)
+
+![Tela principal Offline](./screenshots/offline.jpg)
+
+### Principal (online)
+
+![Tela principal Offline](./screenshots/online.jpg)
+
+### Configurações
+
+![Tela de Cpnfigurações](./screenshots/config.jpg)
+
+### Mural de Mensagens
+
+![Tela do Mural](./screenshots/mural.jpg)
+
+### Mensagens Privadas (online)
+
+![Tela de Mensagens Privadas](./screenshots/private.jpg)
